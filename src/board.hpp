@@ -36,7 +36,7 @@ Move toMove(GridField move, int position);
 class Board {
 private:
     GridField grid[63];
-    WalkResult walk_line(int begin_pos, Direction begin_dir, int position, int* distance, Direction last);
+    WalkResult walk_line(int begin_pos, Direction begin_dir, int position, int* distance, Direction last, int* start_counter);
 
 public:
     Board();

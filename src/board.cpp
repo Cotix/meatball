@@ -87,19 +87,30 @@ bool Board::game_finished() {
     return (this->bitboard[0] | this->bitboard[1] | this->bitboard[2]) == ((1ull << 63) - 1);
 }
 
-WalkResult Board::walk_line(int begin_pos, Direction begin_dir, int position, int* distance, Direction last) {
-    assert(position >= -3 && position < 63);
-    if (this->grid[position] == GridField::EMPTY) return WalkResult::NEUTRAL;
-    if (position == -1) return WalkResult::NEUTRAL;
-    if (position == -2) return WalkResult::BLUE;
-    if (position == -3) return WalkResult::RED;
+WalkResult Board::walk_line(int begin_pos, Direction begin_dir, int position, int* distance, Direction last, int* start_counter) {
+    while (true) {
+        assert(position >= -3 && position < 63);
+        if (this->grid[position] == GridField::EMPTY) return WalkResult::NEUTRAL;
+        switch (position) {
+        case -1:
+            return WalkResult::NEUTRAL;
+        case -2:
+            return WalkResult::BLUE;
+        case -3:
+            return WalkResult::RED;
+        default:
+            break;
+        }
+        if (position == begin_pos) (*start_counter)++;
 
-    Direction dir = LAST_DIR[(int)last][(int)this->grid[position]];
-    if (begin_pos == position && dir == begin_dir) return WalkResult::CYCLE; //TODO: Hardcode from dir as begin_dir instead of beginning last dir
+        Direction dir = LAST_DIR[(int)last][(int)this->grid[position]];
+        if (begin_pos == position && dir == begin_dir) return WalkResult::CYCLE; //TODO: Hardcode from dir as begin_dir instead of beginning last dir
 
-    (*distance)++;
-    assert(*distance <= 1000);
-    return this->walk_line(begin_pos, begin_dir, update_position(position, dir), distance, dir);
+        (*distance)++;
+        assert(*distance <= 1000);
+        position = update_position(position, dir);
+        last = dir;
+    }
 }
 
 int Board::make_move(Move move) {
@@ -112,28 +123,62 @@ int Board::make_move(GridField move, int position) {
     assert((this->bitboard[(int)move] & (1ull << position)) == 0ull);
     this->grid[position] = move;
     this->bitboard[(int)move] |= 1ull << position;
-    WalkResult result[4];
+    WalkResult result[4] = { WalkResult::NEUTRAL, WalkResult::NEUTRAL, WalkResult::NEUTRAL, WalkResult::NEUTRAL };
     int dist[4] = { 1, 1, 1, 1 };
+    int counter = 0;
     switch (move) {
     case GridField::LEFT:
-        result[0] = this->walk_line(position, Direction::NORTH, update_position(position, Direction::NORTH), &dist[0], Direction::NORTH);
-        result[1] = this->walk_line(position, Direction::WEST, update_position(position, Direction::WEST), &dist[1], Direction::WEST);
-        result[2] = this->walk_line(position, Direction::EAST, update_position(position, Direction::EAST), &dist[2], Direction::EAST);
-        result[3] = this->walk_line(position, Direction::SOUTH, update_position(position, Direction::SOUTH), &dist[3], Direction::SOUTH);
+        result[0] = this->walk_line(position, Direction::NORTH, update_position(position, Direction::NORTH), &dist[0], Direction::NORTH, &counter);
+        if (result[0] == WalkResult::CYCLE) {
+            result[1] = WalkResult::CYCLE;
+            if (counter >= 3) break;
+        }
+        else {
+            result[1] = this->walk_line(position, Direction::WEST, update_position(position, Direction::WEST), &dist[1], Direction::WEST, &counter);
+        }
+        result[2] = this->walk_line(position, Direction::EAST, update_position(position, Direction::EAST), &dist[2], Direction::EAST, &counter);
+        if (result[2] == WalkResult::CYCLE) {
+            result[3] = WalkResult::CYCLE;
+        }
+        else {
+            result[3] = this->walk_line(position, Direction::SOUTH, update_position(position, Direction::SOUTH), &dist[3], Direction::SOUTH, &counter);
+        }
         break;
 
     case GridField::STRAIGHT:
-        result[0] = this->walk_line(position, Direction::NORTH, update_position(position, Direction::NORTH), &dist[0], Direction::NORTH);
-        result[1] = this->walk_line(position, Direction::SOUTH, update_position(position, Direction::SOUTH), &dist[1], Direction::SOUTH);
-        result[2] = this->walk_line(position, Direction::EAST, update_position(position, Direction::EAST), &dist[2], Direction::EAST);
-        result[3] = this->walk_line(position, Direction::WEST, update_position(position, Direction::WEST), &dist[3], Direction::WEST);
+        result[0] = this->walk_line(position, Direction::NORTH, update_position(position, Direction::NORTH), &dist[0], Direction::NORTH, &counter);
+        if (result[0] == WalkResult::CYCLE) {
+            result[1] = WalkResult::CYCLE;
+            if (counter >= 3) break;
+        }
+        else {
+            result[1] = this->walk_line(position, Direction::SOUTH, update_position(position, Direction::SOUTH), &dist[1], Direction::SOUTH, &counter);
+        }
+        result[2] = this->walk_line(position, Direction::EAST, update_position(position, Direction::EAST), &dist[2], Direction::EAST, &counter);
+        if (result[2] == WalkResult::CYCLE) {
+            result[3] = WalkResult::CYCLE;
+        }
+        else {
+            result[3] = this->walk_line(position, Direction::WEST, update_position(position, Direction::WEST), &dist[3], Direction::WEST, &counter);
+        }
         break;
 
     case GridField::RIGHT:
-        result[0] = this->walk_line(position, Direction::NORTH, update_position(position, Direction::NORTH), &dist[0], Direction::NORTH);
-        result[1] = this->walk_line(position, Direction::EAST, update_position(position, Direction::EAST), &dist[1], Direction::EAST);
-        result[2] = this->walk_line(position, Direction::SOUTH, update_position(position, Direction::SOUTH), &dist[2], Direction::SOUTH);
-        result[3] = this->walk_line(position, Direction::WEST, update_position(position, Direction::WEST), &dist[3], Direction::WEST);
+        result[0] = this->walk_line(position, Direction::NORTH, update_position(position, Direction::NORTH), &dist[0], Direction::NORTH, &counter);
+        if (result[0] == WalkResult::CYCLE) {
+            result[1] = WalkResult::CYCLE;
+            if (counter >= 3) break;
+        }
+        else {
+            result[1] = this->walk_line(position, Direction::EAST, update_position(position, Direction::EAST), &dist[1], Direction::EAST, &counter);
+        }
+        result[2] = this->walk_line(position, Direction::SOUTH, update_position(position, Direction::SOUTH), &dist[2], Direction::SOUTH, &counter);
+        if (result[2] == WalkResult::CYCLE) {
+            result[3] = WalkResult::CYCLE;
+        }
+        else {
+            result[3] = this->walk_line(position, Direction::WEST, update_position(position, Direction::WEST), &dist[3], Direction::WEST, &counter);
+        }
         break;
 
     default:

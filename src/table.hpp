@@ -4,12 +4,13 @@
 #include <cstdint>
 #include "board.hpp"
 
-#define TABLE_SIZE 997727
+#define TABLE_SIZE 1995431
 #define BUCKET_COUNT 8
 
 struct TableNode {
     uint64_t bitboard[3];
     uint32_t played, won;
+    uint8_t childHeuristic[63 * 3];
 };
 typedef struct TableNode TableNode;
 

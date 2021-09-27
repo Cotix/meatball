@@ -63,34 +63,37 @@ void generate_data() {
     init_tree();
     while (true) {
         Board board;
-        int moves_played = (rand() % 50) + 2;
+        int moves_played = (rand() % 3) + 2;
         for (int i = 0; i < moves_played; i++) {
             board.make_move(GridField(rand() % 3), board.free_position());
         }
         clear_tree();
-        mcts(&board, 0.4 * 1000000000);
-        for (int move = 0; move < 3; move++) {
-            for (int position = 0; position < 63; position++) {
-                printf(((board.bitboard[move] >> position) & 1) == 1 ? "1," : "0,");
-            }
-        }
-        TableNode* root = get_node(&board);
-        assert(root->played >= 2000);
-        for (int move = 0; move < 3; move++) {
-            for (int position = 0; position < 63; position++) {
-                if (!board.temp_move(GridField(move), position)) {
-                    printf("0,");
-                    continue;
+        for (int i = 0; i != 50; ++i) {
+            mcts(&board, (uint64_t)120 * 1000000000);
+            for (int move = 0; move < 3; move++) {
+                for (int position = 0; position < 63; position++) {
+                    printf(((board.bitboard[move] >> position) & 1) == 1 ? "1," : "0,");
                 }
-                TableNode* current = get_node(&board);
-                board.temp_unmove(GridField(move), position);
-                float value = sqrt(((float)current->played) / root->played);
-                assert(value <= 1);
-                printf("%f,", value);
             }
+            TableNode* root = get_node(&board);
+            assert(root->played >= 2000);
+            for (int move = 0; move < 3; move++) {
+                for (int position = 0; position < 63; position++) {
+                    if (!board.temp_move(GridField(move), position)) {
+                        printf("0,");
+                        continue;
+                    }
+                    TableNode* current = get_node(&board);
+                    board.temp_unmove(GridField(move), position);
+                    float value = sqrt(((float)current->played) / root->played);
+                    if (value >= 1) value = 1;
+                    printf("%f,", value);
+                }
+            }
+            printf("\n");
+            fflush(stdout);
+            board.make_move(get_best_move(&board));
         }
-        printf("\n");
-        fflush(stdout);
     }
 }
 

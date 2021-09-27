@@ -5,17 +5,19 @@
 #define _POSIX_C_SOURCE 200809L
 #include <time.h>
 #include <cstring>
-
+#include <cstdio>
 
 float C = 0.175;
 float DIVIDER = 50;
+float HEUR = 0.9;
 
-float get_score(TableNode* parent, TableNode* node) {
-    if (node == 0 || node->played == 0) return 100.0;
+float get_score(TableNode* parent, TableNode* node, int moveid) {
+    if (node == 0 || node->played == 0) return 10 + ((float)parent->childHeuristic[moveid]) / 255.0;
     assert(parent->played > 0 && node->won > 0);
-    return (((float)node->won / (float)node->played / DIVIDER) + C * sqrt(log((float)parent->played) / (float)node->played));
+    float heuristic = ((float)parent->childHeuristic[moveid] * HEUR) / 255.0;
+    return (((float)node->won / (float)node->played / DIVIDER) + C * sqrt(log((float)parent->played) / (float)node->played)) + heuristic / node->played;
 }
-#include <cstdio>
+
 void expand_tree(Board* board) {
     TableNode* history[189];
     int ptr = 0;
@@ -33,7 +35,7 @@ void expand_tree(Board* board) {
         for (int position = 0; position < 63; position++) {
             for (int move = 0; move < 3; move++) {
                 if (!board->temp_move(GridField(move), position)) continue;
-                float score = get_score(current, get_node(board));
+                float score = get_score(current, get_node(board), move * 63 + position);
                 board->temp_unmove(GridField(move), position);
 
                 if (score > best_score) {
