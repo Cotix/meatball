@@ -12,16 +12,15 @@ float DIVIDER = 50;
 float HEUR = 0.9;
 
 float get_score(TableNode* parent, TableNode* node, int moveid) {
-    if (node == 0 || node->played == 0) return 10 + ((float)parent->childHeuristic[moveid]) / 255.0;
+    if (node == 0 || node->played == 0) return 10;
     assert(parent->played > 0 && node->won > 0);
-    float heuristic = ((float)parent->childHeuristic[moveid] * HEUR) / 255.0;
-    return (((float)node->won / (float)node->played / DIVIDER) + C * sqrt(log((float)parent->played) / (float)node->played)) + heuristic / node->played;
+    return (((float)node->won / (float)node->played / DIVIDER) - ((float)node->lost / (float)node->played / DIVIDER / 10) + C * sqrt(log((float)parent->played) / (float)node->played));
 }
 
 void expand_tree(Board* board) {
     TableNode* history[189];
     int ptr = 0;
-    int scores[2] = { 50, 50 };
+    int scores[2] = { 100, 100 };
     TableNode* current = get_node(board);
 
     while (current != 0 && !board->game_finished()) {

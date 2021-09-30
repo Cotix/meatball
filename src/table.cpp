@@ -4,39 +4,12 @@
 #include <cstdio>
 #include <cassert>
 #include <iostream>
-#include <fdeep/fdeep.hpp>
-
-const auto model = fdeep::load_model("fdeep_model.json", false, 0);
-
 TableBucket* TABLE_DATA;
 
 inline __attribute__((always_inline)) uint32_t table_idx(uint64_t hash) {
     return (hash) % TABLE_SIZE;
 }
 
-void fill_heuristic(Board* board, TableNode* node) {
-    std::vector<float> input;
-    for (int move = 0; move < 3; move++) {
-        for (int position = 0; position < 63; position++) {
-            input.push_back(((board->bitboard[move] >> position) & 1) == 1 ? 1.0 : 0.0);
-        }
-    }
-    const auto result = model.predict({ fdeep::tensor(fdeep::tensor_shape(static_cast<std::size_t>(63 * 3)), input) });
-    for (int move = 0; move < 3; move++) {
-        for (int position = 0; position < 63; position++) {
-            float value = result.at(0).get(fdeep::tensor_pos(move * 63 + position));
-            if (value >= 1.0) {
-                node->childHeuristic[move * 63 + position] = 255;
-            }
-            else if (value <= 0.0) {
-                node->childHeuristic[move * 63 + position] = 0;
-            }
-            else {
-                node->childHeuristic[move * 63 + position] = 255 * value;
-            }
-        }
-    }
-}
 
 TableNode* add_node(Board* board) {
     TableNode* existing = get_node(board);
@@ -49,7 +22,6 @@ TableNode* add_node(Board* board) {
             nodes[i].bitboard[0] = board->bitboard[0];
             nodes[i].bitboard[1] = board->bitboard[1];
             nodes[i].bitboard[2] = board->bitboard[2];
-            fill_heuristic(board, &nodes[i]);
             return &nodes[i];
         }
     }
@@ -70,10 +42,10 @@ TableNode* add_node(Board* board) {
 
     nodes[lowest_id].played = 0;
     nodes[lowest_id].won = 0;
+    nodes[lowest_id].lost = 0;
     nodes[lowest_id].bitboard[0] = board->bitboard[0];
     nodes[lowest_id].bitboard[1] = board->bitboard[1];
     nodes[lowest_id].bitboard[2] = board->bitboard[2];
-    fill_heuristic(board, &nodes[lowest_id]);
     return &nodes[lowest_id];
 }
 

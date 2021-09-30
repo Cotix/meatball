@@ -98,7 +98,7 @@ void generate_data() {
 }
 
 int main() {
-    generate_data();
+    // generate_data();
     init_tree();
     char buffer[32];
     Board board;
